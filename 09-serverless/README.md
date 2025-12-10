@@ -17,15 +17,17 @@ edit pyproject.toml first
 then `uv sync`
 
 # load image and preprocess as in validation
-use load image function as instructed,
-copy preprocess (val_transform from last week)
-unsqueeze it turn that into numpy array
-see lambda_function.py
+use load image function as instructed,   
+preprocess include resize, totensor and normalize.   
+first turn img into numpy array, add batch size,   
+then use the pytorch preprocess function given,   
+   
+see lambda_function.py.  
 
 # pull docker image
 `docker pull agrigorev/model-2025-hairstyle:v1`
 `docker image`
-it shows image size is 608MB
+it shows image size is 608MB.  
 
 # lambda function in Dockerfile
 see lambda function and dockerfile
@@ -34,9 +36,12 @@ see lambda function and dockerfile
 # run lambda function in docker 
 ```
 docker build -t hairstyle-prediction:v1 .
-docker run -it --rm -p 8080:8080 hairstyle-prediction:v1
+docker run -it --rm \
+    -p 8080:8080 \
+    -e MODEL_PATH="hair_classifier_empty.onnx" \
+    hairstyle-prediction:v1
 ```
-open another terminal
+open another terminal.  
 `python test.py`
 -0.10220836102962494
 

@@ -1,11 +1,12 @@
+import os
 import numpy as np
 import onnxruntime as ort
 from io import BytesIO
 from urllib import request
 
 from PIL import Image
-import torchvision.models as models
-from torchvision import transforms
+
+onnx_model_path = os.getenv("MODEL_PATH", "hair_classifier_v1.onnx")
 
 
 def download_image(url):
@@ -21,25 +22,31 @@ def prepare_image(img, target_size):
     img = img.resize(target_size, Image.NEAREST)
     return img
 
+def preprocess_pytorch_style(X):
+    # X: shape (1, 299, 299, 3), dtype=float32, values in [0, 255]
+    X = X / 255.0
+
+    mean = np.array([0.485, 0.456, 0.406]).reshape(1, 3, 1, 1)
+    std = np.array([0.229, 0.224, 0.225]).reshape(1, 3, 1, 1)
+
+    # Convert NHWC → NCHW
+    # from (batch, height, width, channels) → (batch, channels, height, width)
+    X = X.transpose(0, 3, 1, 2)  
+
+    # Normalize
+    X = (X - mean) / std
+
+    return X.astype(np.float32)
+
 
 def predict(url, onnx_model_path):
     input_size = 200
     img = download_image(url)
     img = prepare_image(img, (input_size,input_size))
 
-    mean = [0.485, 0.456, 0.406]
-    std = [0.229, 0.224, 0.225]
-
-    preprocess = transforms.Compose([
-        transforms.Resize((input_size, input_size)),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=mean, std=std)
-    ])
-
-    tensor = preprocess(img)
-    tensor = tensor.unsqueeze(0)
-
-    input_array = tensor.numpy().astype(np.float32)
+    X = np.array(img)
+    X = np.expand_dims(X, axis=0)
+    input_array = preprocess_pytorch_style(X)
 
     session = ort.InferenceSession(onnx_model_path, providers=["CPUExecutionProvider"])
 
@@ -58,7 +65,6 @@ def lambda_handler(event, context):
     # url = 'https://habrastorage.org/webt/yf/_d/ok/yf_dokzqy3vcritme8ggnzqlvwa.jpeg'
     # onnx_model_path = "hair_classifier_v1.onnx"
     url = event["url"]
-    onnx_model_path = event["onnx_model_path"]
     predictions = predict(url, onnx_model_path)
     return predictions
 
