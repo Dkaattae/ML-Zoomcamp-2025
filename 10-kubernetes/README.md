@@ -66,3 +66,16 @@ kubectl port-forward service/subscription 9696:80
 in another terminal, run test again
 
 ## autoscaling
+apply components.yaml.  
+and patch metric server.  
+```
+kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+
+kubectl patch -n kube-system deployment metrics-server --type=json -p '[{"op":"add","path":"/spec/template/spec/containers/0/args/-","value":"--kubelet-insecure-tls"}]'
+```
+run python q6_test.py to test it. 
+
+## delete cluster
+```
+kind delete cluster --name mlzoomcamp
+```
